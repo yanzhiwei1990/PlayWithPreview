@@ -1,5 +1,6 @@
 package com.droidlogic.tool.playvideowithpreview;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
 
@@ -47,13 +48,14 @@ public class MainActivity extends Activity {
 			super.handleMessage(msg);
 			switch (msg.what) {
 				case REQUEST_CHECK_TIMEOUT:
-					if (System.currentTimeMillis() - mStartTime > 20000) {
-						mStringBuilder.append("检测超时，请点击初始化按钮手动初始化...\n");
+					if (System.currentTimeMillis() - mStartTime > 10000) {
+						mStringBuilder.append("检测超时，请点击播放按钮重新初始化...\n");
 						mTextView.setText(mStringBuilder.toString());
 						mScrollView.fullScroll(ScrollView.FOCUS_DOWN);
 						mHandler.removeCallbacksAndMessages(null);
 						mButton.setEnabled(true);
 						mButton.setText("播放");
+						mButton.requestFocus();
 						Log.d(TAG, "wait timeouted");
 					} else {
 						mHandler.sendEmptyMessageDelayed(REQUEST_CHECK_TIMEOUT, 1000);
@@ -95,7 +97,7 @@ public class MainActivity extends Activity {
 				case REQUEST_CHECK_MEDIA:
 					Log.d(TAG, "REQUEST_CHECK_MEDIA");
 					if (checkMedia()) {
-						mStringBuilder.append("检查到媒体文件...\n");
+						mStringBuilder.append("发现媒体文件...\n");
 						mHandler.sendEmptyMessageDelayed(REQUEST_CHECK_CAMERA, 1000);
 					} else {
 						mStringBuilder.append("未发现媒体文件，继续扫描媒体文件...\n");
@@ -111,7 +113,7 @@ public class MainActivity extends Activity {
 						mButton.setEnabled(true);
 						mButton.setText("播放");
 					} else {
-						mStringBuilder.append("未检测到摄像头，继续扫描摄像头...\n");
+						mStringBuilder.append("未检测到摄像头，继续检测摄像头...\n");
 						mHandler.sendEmptyMessageDelayed(REQUEST_CHECK_CAMERA, 1000);
 					}
 					break;
@@ -133,7 +135,7 @@ public class MainActivity extends Activity {
         mTextView = (TextView)findViewById(R.id.status_text);
         mButton = (Button)findViewById(R.id.init_button);
         mScrollView = (ScrollView)findViewById(R.id.scrollView);
-        mHandler.sendEmptyMessageDelayed(REQUEST_PERMISSION, 1000);
+        mHandler.sendEmptyMessageDelayed(REQUEST_PERMISSION, 100);
         mStartTime = System.currentTimeMillis();
         mButton.setOnClickListener(new OnClickListener() {
 			
@@ -141,10 +143,12 @@ public class MainActivity extends Activity {
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
 				mHandler.removeCallbacksAndMessages(null);
-				mHandler.sendEmptyMessageDelayed(REQUEST_PERMISSION, 1000);
+				mHandler.sendEmptyMessageDelayed(REQUEST_PERMISSION, 100);
 		        mStartTime = System.currentTimeMillis();
+		        Log.d(TAG, "onClick reexamination");
 			}
 		});
+        mButton.requestFocus();
     }
 
     @Override
@@ -159,6 +163,7 @@ public class MainActivity extends Activity {
     	// TODO Auto-generated method stub
     	super.onPause();
     	Log.d(TAG, "onPause");
+    	mButton.requestFocus();
     }
     
     @Override
@@ -177,7 +182,7 @@ public class MainActivity extends Activity {
     
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-
+    	Log.d(TAG, "onRequestPermissionsResult requestCode = " + requestCode + ", permissions = " + Arrays.toString(permissions) + ", grantResults = " + Arrays.toString(grantResults));
         if (requestCode == REQUEST_EXTERNAL_PERMISSION) {
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 mHandler.sendEmptyMessage(REQUEST_CAMERA_PERMISSION);
@@ -242,7 +247,7 @@ public class MainActivity extends Activity {
             if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
                 Toast.makeText(MainActivity.this, "Camera permission are required for this demo", Toast.LENGTH_LONG).show();
             }
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_PERMISSION);
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
         }
     }
 
