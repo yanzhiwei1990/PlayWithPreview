@@ -11,11 +11,20 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center" />
-    
-    <com.droidlogic.tool.playvideowithpreview.AutoFitTextureView
-        android:id="@+id/camera_view"
-        android:layout_width="320dp"
-        android:layout_height="240dp"
-        android:layout_gravity="top|right" />
+
+    <LinearLayout
+        android:id="@+id/camera_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|right"
+        android:gravity="center"
+        android:orientation="vertical" >
+
+        <com.droidlogic.tool.playvideowithpreview.AutoFitTextureView
+            android:id="@+id/camera_view"
+            android:layout_width="320dp"
+            android:layout_height="240dp" />
+
+    </LinearLayout>
 
 </FrameLayout>

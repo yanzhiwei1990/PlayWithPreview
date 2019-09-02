@@ -37,6 +37,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 import android.widget.VideoView;
 import android.util.DisplayMetrics;
@@ -50,6 +51,7 @@ public class VideoShowActivity extends Activity {
 	private static final String TAG = "VideoShowActivity";
     private VideoView mVideoView;
     private AutoFitTextureView mTextureView;
+    private LinearLayout mLinearLayout;
     private boolean mIsSmallWindow = true;
 
     @Override
@@ -62,6 +64,7 @@ public class VideoShowActivity extends Activity {
 
         mVideoView = (VideoView)findViewById(R.id.video_view);
         mTextureView = (AutoFitTextureView)findViewById(R.id.camera_view);
+        mLinearLayout = (LinearLayout)findViewById(R.id.camera_container);
         //mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         setupVideo();
         setTextureViewDisplay();
@@ -78,10 +81,35 @@ public class VideoShowActivity extends Activity {
     	params.width = width;
     	params.height = height;
     	mTextureView.setLayoutParams(params);
+    	mTextureView.requestLayout();
+    	int[] size = getDisplaySize();
+    	LinearLayout.MarginLayoutParams layoutParams = (LinearLayout.MarginLayoutParams) mLinearLayout.getLayoutParams();
+    	if (mIsSmallWindow) {
+    		int left = size[0] - width - 50;
+    		int top = size[1] - height - 50;
+    		if (left >= 0 && top >= 0) {
+    			//layoutParams.leftMargin = size[0] - width - 50;
+        		//layoutParams.topMargin = size[1] - height - 50;
+        		layoutParams.bottomMargin = 50;
+        		layoutParams.rightMargin = 50;
+    		} else {
+    			//layoutParams.leftMargin = size[0] - width;
+        		//layoutParams.topMargin = size[1] - height;
+        		layoutParams.bottomMargin = 0;
+        		layoutParams.rightMargin = 0;
+    		}
+    	} else {
+    		//layoutParams.leftMargin = 0;
+    		//layoutParams.topMargin = 0;
+    		layoutParams.bottomMargin = 0;
+    		layoutParams.rightMargin = 0;
+    	}
+    	mLinearLayout.setLayoutParams(layoutParams);
+    	mLinearLayout.requestLayout();
     }
     
     private int[] getNeedDisplaySize() {
-    	int[] result = {320, 240};
+    	int[] result = {640, 480};
     	WindowManager manager = this.getWindowManager();
 		DisplayMetrics outMetrics = new DisplayMetrics();
 		manager.getDefaultDisplay().getMetrics(outMetrics);
