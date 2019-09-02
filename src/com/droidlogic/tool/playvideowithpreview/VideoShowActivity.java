@@ -95,6 +95,16 @@ public class VideoShowActivity extends Activity {
     	return result;
     }
     
+    private int[] getDisplaySize() {
+    	int[] result = new int[2];
+    	WindowManager manager = this.getWindowManager();
+		DisplayMetrics outMetrics = new DisplayMetrics();
+		manager.getDefaultDisplay().getMetrics(outMetrics);
+		result[0] = outMetrics.widthPixels;
+		result[1] = outMetrics.heightPixels;
+		return result;
+    }
+    
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
     	// TODO Auto-generated method stub
@@ -487,7 +497,8 @@ public class VideoShowActivity extends Activity {
             assert texture != null;
 
             // We configure the size of default buffer to be the size of camera preview we want.
-            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            int[] size = getDisplaySize();
+            texture.setDefaultBufferSize(size[0]/*mPreviewSize.getWidth()*/, size[1]/*mPreviewSize.getHeight()*/);
 
             // This is the output Surface we need to start preview.
             Surface surface = new Surface(texture);
