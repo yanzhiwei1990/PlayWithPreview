@@ -30,6 +30,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Surface;
@@ -38,15 +39,18 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
 import android.widget.VideoView;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.view.ViewGroup.LayoutParams;
 
 public class VideoShowActivity extends Activity {
 
 	private static final String TAG = "VideoShowActivity";
     private VideoView mVideoView;
     private AutoFitTextureView mTextureView;
+    private boolean mIsSmallWindow = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +64,59 @@ public class VideoShowActivity extends Activity {
         mTextureView = (AutoFitTextureView)findViewById(R.id.camera_view);
         //mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         setupVideo();
+        setTextureViewDisplay();
     }
 
+    private void setTextureViewDisplay() {
+    	int[] size = getNeedDisplaySize();
+		setTextureViewSize(size[0], size[1]);
+    }
+    
+    private void setTextureViewSize(int width, int height) {
+    	//mTextureView.setAspectRatio(width, height);
+    	LayoutParams params = mTextureView.getLayoutParams();
+    	params.width = width;
+    	params.height = height;
+    	mTextureView.setLayoutParams(params);
+    }
+    
+    private int[] getNeedDisplaySize() {
+    	int[] result = {320, 240};
+    	WindowManager manager = this.getWindowManager();
+		DisplayMetrics outMetrics = new DisplayMetrics();
+		manager.getDefaultDisplay().getMetrics(outMetrics);
+		int width = outMetrics.widthPixels;
+		int height = outMetrics.heightPixels;
+    	if (!mIsSmallWindow) {
+    		result[0] = width;
+    		result[1] = height;
+    	}
+    	Log.d(TAG, "getNeedDisplaySize = " + Arrays.toString(result));
+    	return result;
+    }
+    
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+    	// TODO Auto-generated method stub
+    	Log.d(TAG, "onKeyDown = " + event);
+    	switch (keyCode) {
+    		case KeyEvent.KEYCODE_DPAD_CENTER:
+    		case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER:
+    			if (mIsSmallWindow) {
+    				mIsSmallWindow = false;
+    			} else {
+    				mIsSmallWindow = true;
+    			}
+    			int[] size = getNeedDisplaySize();
+    			setTextureViewSize(size[0], size[1]);
+    			Log.d(TAG, "onKeyDown OK mIsSmallWindow = " + mIsSmallWindow + ", size " + Arrays.toString(size));
+    			return true;
+			default:
+				break;
+    	}
+    	return super.onKeyDown(keyCode, event);
+    }
     
     //camera preview
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
@@ -75,12 +130,12 @@ public class VideoShowActivity extends Activity {
     /**
      * Max preview width that is guaranteed by Camera2 API
      */
-    private static final int MAX_PREVIEW_WIDTH = 320;//1920;
+    private static final int MAX_PREVIEW_WIDTH = 1920;
 
     /**
      * Max preview height that is guaranteed by Camera2 API
      */
-    private static final int MAX_PREVIEW_HEIGHT = 240;//1080;
+    private static final int MAX_PREVIEW_HEIGHT = 1080;
 
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
@@ -91,21 +146,26 @@ public class VideoShowActivity extends Activity {
 
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+        	Log.d(TAG, "onSurfaceTextureAvailable width = " + width + ", height = " + height);
             openCamera(width, height);
         }
 
         @Override
         public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
+        	Log.d(TAG, "onSurfaceTextureSizeChanged width = " + width + ", height = " + height);
+        	setUpCameraOutputs(width, height);
             configureTransform(width, height);
         }
 
         @Override
         public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
+        	Log.d(TAG, "onSurfaceTextureSizeChanged onSurfaceTextureDestroyed");
             return true;
         }
 
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture texture) {
+        	//Log.d(TAG, "onSurfaceTextureSizeChanged onSurfaceTextureUpdated");
         }
     };
 
@@ -277,7 +337,7 @@ public class VideoShowActivity extends Activity {
                 Size largest = Collections.max(
                         Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
                         new CompareSizesByArea());
-
+                Log.d(TAG, "setUpCameraOutputs getOutputSizes = " + Arrays.toString(map.getOutputSizes(ImageFormat.JPEG)));
                 // Find out if we need to swap dimension to get the preview size relative to sensor
                 // coordinate.
                 int displayRotation = activity.getWindowManager().getDefaultDisplay().getRotation();
@@ -332,13 +392,13 @@ public class VideoShowActivity extends Activity {
 
                 // We fit the aspect ratio of TextureView to the size of preview we picked.
                 int orientation = getResources().getConfiguration().orientation;
-                if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                /*if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
                     mTextureView.setAspectRatio(
                             mPreviewSize.getWidth(), mPreviewSize.getHeight());
                 } else {
                     mTextureView.setAspectRatio(
                             mPreviewSize.getHeight(), mPreviewSize.getWidth());
-                }
+                }*/
 
                 mCameraId = cameraId;
                 return;
