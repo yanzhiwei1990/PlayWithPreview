@@ -40,6 +40,7 @@ import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 import android.widget.VideoView;
+import android.widget.ZoomButton;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
@@ -53,6 +54,9 @@ public class VideoShowActivity extends Activity {
     private AutoFitTextureView mTextureView;
     private LinearLayout mLinearLayout;
     private boolean mIsSmallWindow = true;
+    private int mZoomStatus = 2;
+    private int[] ZOOM_WEIGHT = {384, 576, 758, 960, 1152, 1344};
+    private int[] ZOOM_HEIGHT = {216, 315, 432, 540, 648, 756};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,6 +122,9 @@ public class VideoShowActivity extends Activity {
     	if (!mIsSmallWindow) {
     		result[0] = width;
     		result[1] = height;
+    	} else {
+    		result[0] = ZOOM_WEIGHT[mZoomStatus];
+    		result[1] = ZOOM_HEIGHT[mZoomStatus];
     	}
     	Log.d(TAG, "getNeedDisplaySize = " + Arrays.toString(result));
     	return result;
@@ -140,7 +147,7 @@ public class VideoShowActivity extends Activity {
     	switch (keyCode) {
     		case KeyEvent.KEYCODE_DPAD_CENTER:
     		case KeyEvent.KEYCODE_ENTER:
-            case KeyEvent.KEYCODE_NUMPAD_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER:{
     			if (mIsSmallWindow) {
     				mIsSmallWindow = false;
     			} else {
@@ -150,6 +157,29 @@ public class VideoShowActivity extends Activity {
     			setTextureViewSize(size[0], size[1]);
     			Log.d(TAG, "onKeyDown OK mIsSmallWindow = " + mIsSmallWindow + ", size " + Arrays.toString(size));
     			return true;
+    		}
+            case KeyEvent.KEYCODE_DPAD_UP:{
+            	mZoomStatus++;
+            	if (mZoomStatus == ZOOM_WEIGHT.length) {
+            		mZoomStatus = ZOOM_WEIGHT.length - 1;
+            		return true;
+            	}
+            	int[] size = getNeedDisplaySize();
+    			setTextureViewSize(size[0], size[1]);
+    			Log.d(TAG, "onKeyDown KEYCODE_DPAD_UP mIsSmallWindow = " + mIsSmallWindow + ", size " + Arrays.toString(size));
+            	break;
+            }
+            case KeyEvent.KEYCODE_DPAD_DOWN:{
+            	mZoomStatus--;
+            	if (mZoomStatus < 0) {
+            		mZoomStatus = 0;
+            		return true;
+            	}
+            	int[] size = getNeedDisplaySize();
+    			setTextureViewSize(size[0], size[1]);
+    			Log.d(TAG, "onKeyDown KEYCODE_DPAD_DOWN mIsSmallWindow = " + mIsSmallWindow + ", size " + Arrays.toString(size));
+            	break;
+            }
 			default:
 				break;
     	}
