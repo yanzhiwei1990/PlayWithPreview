@@ -545,13 +545,28 @@ public class VideoShowActivity extends Activity {
         mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mp) {
-                mVideoView.start();
+            	mp.start();
+                mp.setLooping(true);
             }
         });
         mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
-                stopPlaybackVideo();
+                //stopPlaybackVideo();
+            	List<String> list = FileUtils.getMediaList();
+            	String path = null;
+            	if (list != null && list.size() > 0) {
+            		String[] info = list.get(0).split(",");
+            		if (info != null && info.length == 2) {
+            			path = info[1];
+            		}
+            	}
+            	if (path != null) {
+            		mVideoView.setVideoPath(path/*"/sdcard/test4.mkv"*/);
+            		mVideoView.start();
+            	} else {
+            		stopPlaybackVideo();
+            	}
             }
         });
         mVideoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
