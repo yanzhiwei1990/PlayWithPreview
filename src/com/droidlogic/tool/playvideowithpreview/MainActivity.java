@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
     private static final int REQUEST_CAMERA_PERMISSION = 4;
     private static final int REQUEST_CHECK_MEDIA = 5;
     private static final int REQUEST_CHECK_CAMERA = 6;
+    private static final int REQUEST_RECORD_PERMISSION = 7;
     
     private TextView mTextView;
     private Button mButton;
@@ -77,9 +78,15 @@ public class MainActivity extends Activity {
 						mStringBuilder.append("检查Camera权限...\n");
 						//mHandler.sendEmptyMessage(REQUEST_CAMERA_PERMISSION);
 						mHandler.sendEmptyMessageDelayed(REQUEST_CAMERA_PERMISSION, 1000);
+					} else if (!hasRecordPermission()) {
+						mStringBuilder.append("已获得存储权限...\n");
+						mStringBuilder.append("已获取Camera权限...\n");
+						//mHandler.sendEmptyMessage(REQUEST_CAMERA_PERMISSION);
+						mHandler.sendEmptyMessageDelayed(REQUEST_RECORD_PERMISSION, 1000);
 					} else {
 						mStringBuilder.append("已获得存储权限...\n");
 						mStringBuilder.append("已获取Camera权限...\n");
+						mStringBuilder.append("获取Record权限...\n");
 						//mHandler.sendEmptyMessage(REQUEST_CHECK_MEDIA);
 						mHandler.sendEmptyMessageDelayed(REQUEST_CHECK_MEDIA, 1000);
 					}
@@ -93,6 +100,11 @@ public class MainActivity extends Activity {
 					Log.d(TAG, "REQUEST_CAMERA_PERMISSION");
 					mStringBuilder.append("申请Camera权限...\n");
 					requestCameraPermission();
+					break;
+				case REQUEST_RECORD_PERMISSION:
+					Log.d(TAG, "REQUEST_RECORD__PERMISSION");
+					mStringBuilder.append("申请Record权限...\n");
+					requestRecordPermission();
 					break;
 				case REQUEST_CHECK_MEDIA:
 					Log.d(TAG, "REQUEST_CHECK_MEDIA");
@@ -191,9 +203,15 @@ public class MainActivity extends Activity {
             }
         } else if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            	mHandler.sendEmptyMessage(REQUEST_CHECK_MEDIA);
+            	mHandler.sendEmptyMessage(REQUEST_RECORD_PERMISSION);
             } else {
                 requestCameraPermission();
+            }
+        } else if (requestCode == REQUEST_RECORD_PERMISSION) {
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            	mHandler.sendEmptyMessage(REQUEST_CHECK_MEDIA);
+            } else {
+                requestRecordPermission();
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -242,6 +260,14 @@ public class MainActivity extends Activity {
         }
     }
     
+    private boolean hasRecordPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        } else {
+            return true;
+        }
+    }
+    
     private void requestCameraPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
@@ -251,6 +277,15 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void requestRecordPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
+                Toast.makeText(MainActivity.this, "Record permission are required for this demo", Toast.LENGTH_LONG).show();
+            }
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_PERMISSION);
+        }
+    }
+    
     private void requestWriteExternalPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {

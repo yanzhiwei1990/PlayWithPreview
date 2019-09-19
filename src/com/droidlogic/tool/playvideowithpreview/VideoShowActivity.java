@@ -1,9 +1,13 @@
 package com.droidlogic.tool.playvideowithpreview;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -22,12 +26,15 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.view.KeyEvent;
@@ -272,7 +279,8 @@ public class VideoShowActivity extends Activity {
             // This method is called when the camera is opened.  We start camera preview here.
             mCameraOpenCloseLock.release();
             mCameraDevice = cameraDevice;
-            createCameraPreviewSession();
+            //createCameraPreviewSession();
+            startRecordingVideo();
         }
 
         @Override
@@ -295,6 +303,31 @@ public class VideoShowActivity extends Activity {
 
     };
 
+    private MediaRecorder mMediaRecorder;
+    private boolean mIsRecordingVideo;
+    private String mNextVideoAbsolutePath;
+    private Size mVideoSize;
+    //private CaptureRequest.Builder mRecordBuilder;
+    //private CameraCaptureSession mRecordCaptureSession;
+    private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
+    private static final int SENSOR_ORIENTATION_INVERSE_DEGREES = 270;
+    private static final SparseIntArray DEFAULT_ORIENTATIONS = new SparseIntArray();
+    private static final SparseIntArray INVERSE_ORIENTATIONS = new SparseIntArray();
+    
+    static {
+        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_0, 90);
+        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_180, 270);
+        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
+    }
+
+    static {
+        INVERSE_ORIENTATIONS.append(Surface.ROTATION_0, 270);
+        INVERSE_ORIENTATIONS.append(Surface.ROTATION_90, 180);
+        INVERSE_ORIENTATIONS.append(Surface.ROTATION_180, 90);
+        INVERSE_ORIENTATIONS.append(Surface.ROTATION_270, 0);
+    }
+    
     /**
      * An additional thread for running tasks that shouldn't block the UI.
      */
@@ -454,6 +487,7 @@ public class VideoShowActivity extends Activity {
                 // Danger, W.R.! Attempting to use too large a preview size could  exceed the camera
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
+                mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
                 mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
                         rotatedPreviewWidth, rotatedPreviewHeight, maxPreviewWidth,
                         maxPreviewHeight, largest);
@@ -478,6 +512,16 @@ public class VideoShowActivity extends Activity {
         }
     }
 
+    private Size chooseVideoSize(Size[] choices) {
+        for (Size size : choices) {
+            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
+                return size;
+            }
+        }
+        Log.e(TAG, "Couldn't find any suitable video size");
+        return choices[choices.length - 1];
+    }
+    
     /**
      * Opens the camera specified by {@link CameraFragment#mCameraId}.
      */
@@ -494,6 +538,7 @@ public class VideoShowActivity extends Activity {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
+            mMediaRecorder = new MediaRecorder();
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -604,7 +649,14 @@ public class VideoShowActivity extends Activity {
             e.printStackTrace();
         }
     }
-
+    
+    private void closePreviewSession() {
+        if (mCaptureSession != null) {
+        	mCaptureSession.close();
+        	mCaptureSession = null;
+        }
+    }
+    
     /**
      * Configures the necessary {@link android.graphics.Matrix} transformation to `mTextureView`.
      * This method should be called after the camera preview size is determined in
@@ -638,6 +690,157 @@ public class VideoShowActivity extends Activity {
         mTextureView.setTransform(matrix);
     }
 
+    private void setUpMediaRecorder() {
+        final Activity activity = VideoShowActivity.this;
+        if (null == activity) {
+            return;
+        }
+        try {
+	        //mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+	        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+	        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+	        if (mNextVideoAbsolutePath == null || mNextVideoAbsolutePath.isEmpty()) {
+	            mNextVideoAbsolutePath = getVideoFilePath(activity);
+	        }
+	        mMediaRecorder.setOutputFile(mNextVideoAbsolutePath);
+	        mMediaRecorder.setVideoEncodingBitRate(10000000);
+	        mMediaRecorder.setVideoFrameRate(30);
+	        mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+	        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+	        //mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+	        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+	        switch (mSensorOrientation) {
+	            case SENSOR_ORIENTATION_DEFAULT_DEGREES:
+	                mMediaRecorder.setOrientationHint(DEFAULT_ORIENTATIONS.get(rotation));
+	                break;
+	            case SENSOR_ORIENTATION_INVERSE_DEGREES:
+	                mMediaRecorder.setOrientationHint(INVERSE_ORIENTATIONS.get(rotation));
+	                break;
+	        }
+			mMediaRecorder.prepare();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    }
+
+    /*private String getVideoFilePath() {
+        final File dir = new File("/sdcard/Movies");
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy_MM_dd-HH_mm_ss");
+        Date curDate = new Date();
+        String currentTime = formatter.format(curDate);
+        return (dir == null ? "" : (dir.getAbsolutePath() + "/"))
+                + currentTime + ".mp4";
+    }*/
+    
+    private String getVideoFilePath(Context context) {
+    	final File dir = Environment.getExternalStorageDirectory();
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy_MM_dd-HH_mm_ss");
+        Date curDate = new Date();
+        String currentTime = formatter.format(curDate);
+        File folder = new File(dir == null ? "" : (dir.getAbsolutePath() + "/test_records/"));
+        if (folder != null && !folder.exists()) {
+        	boolean status = folder.mkdir();
+        	Log.d(TAG, "getVideoFilePath mkdir = " + status);
+        }
+        return (!folder.exists() ? "" : (folder.getAbsolutePath() + "/"))
+                + currentTime + ".mp4";
+    }
+
+    private void startRecordingVideo() {
+        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
+            return;
+        }
+        try {
+            setUpMediaRecorder();
+            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+            assert texture != null;
+            //texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            int[] size = getDisplaySize();
+            texture.setDefaultBufferSize(size[0]/*mPreviewSize.getWidth()*/, size[1]/*mPreviewSize.getHeight()*/);
+            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            List<Surface> surfaces = new ArrayList<Surface>();
+
+            // Set up Surface for the camera preview
+            Surface previewSurface = new Surface(texture);
+            surfaces.add(previewSurface);
+            mPreviewRequestBuilder.addTarget(previewSurface);
+
+            // Set up Surface for the MediaRecorder
+            Surface recorderSurface = mMediaRecorder.getSurface();
+            surfaces.add(recorderSurface);
+            mPreviewRequestBuilder.addTarget(recorderSurface);
+
+            // Start a capture session
+            // Once the session starts, we can update the UI and start recording
+            mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+
+                @Override
+                public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+                	mCaptureSession = cameraCaptureSession;
+                	updatePreview();
+                    VideoShowActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // UI
+                            mIsRecordingVideo = true;
+                            // Start recording
+                            mMediaRecorder.start();
+                        }
+                    });
+                }
+
+                @Override
+                public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+                    Activity activity = VideoShowActivity.this;
+                    if (null != activity) {
+                        Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }, mBackgroundHandler);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updatePreview() {
+        if (null == mCameraDevice) {
+            return;
+        }
+        try {
+            // Auto focus should be continuous for camera preview.
+        	mPreviewRequestBuilder.set(CaptureRequest.CONTROL_MODE,
+                    CameraMetadata.CONTROL_MODE_AUTO);
+
+            // Finally, we start displaying the camera preview.
+            mPreviewRequest = mPreviewRequestBuilder.build();
+            mCaptureSession.setRepeatingRequest(mPreviewRequest,
+                    null, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private void stopRecordingVideo() {
+        // UI
+        mIsRecordingVideo = false;
+        // Stop recording
+        try {
+        	mMediaRecorder.stop();
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+        mMediaRecorder.reset();
+
+        Activity activity = VideoShowActivity.this;
+        if (null != activity) {
+            Toast.makeText(activity, "Video saved: " + mNextVideoAbsolutePath,
+                    Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "Video saved: " + mNextVideoAbsolutePath);
+        }
+        mNextVideoAbsolutePath = null;
+    }
+    
     /**
      * Shows a {@link Toast} on the UI thread.
      *
@@ -749,6 +952,10 @@ public class VideoShowActivity extends Activity {
         if (mVideoView.canPause()) {
             mVideoView.pause();
         }
+        if (mIsRecordingVideo) {
+        	stopRecordingVideo();
+        }
+        closePreviewSession();
         closeCamera();
         stopBackgroundThread();
     }
