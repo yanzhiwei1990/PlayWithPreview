@@ -2,7 +2,11 @@ package com.droidlogic.tool.playvideowithpreview;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.BlockingDeque;
+
+import com.droidlogic.app.SystemControlManager;
 
 import android.Manifest;
 import android.app.Activity;
@@ -43,6 +47,7 @@ public class MainActivity extends Activity {
     private StringBuilder mStringBuilder = new StringBuilder();
     private long mStartTime = 0;
     private boolean mStarted = false;
+    private SystemControlManager mSystemControlManager;
 
     private Handler mHandler = new Handler() {
     	public void handleMessage(Message msg) {
@@ -161,8 +166,17 @@ public class MainActivity extends Activity {
 			}
 		});
         mButton.requestFocus();
+        mSystemControlManager = SystemControlManager.getInstance();
     }
 
+    @Override
+    protected void onStart() {
+    	// TODO Auto-generated method stub
+    	super.onStart();
+    	Log.d(TAG, "onStart");
+    	//startTimer();
+    }
+    
     @Override
     protected void onResume() {
     	// TODO Auto-generated method stub
@@ -183,6 +197,7 @@ public class MainActivity extends Activity {
     	// TODO Auto-generated method stub
     	super.onStop();
     	Log.d(TAG, "onStop");
+    	//stopTimer();
     }
     
     @Override
@@ -299,5 +314,24 @@ public class MainActivity extends Activity {
     	Intent intent = new Intent(MainActivity.this, VideoShowActivity.class);
         startActivity(intent);
         mHandler.removeCallbacksAndMessages(null);
+    }
+    
+    private Timer mTimer = new Timer();
+    private TimerTask mTimerTask = new TimerTask() {
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			final String VideoFrameStr = FileUtils.getVideoFpsBySystemControl(mSystemControlManager);//FileUtils.getVideoFps();
+			Log.d(TAG, "mTimerTask VideoFrameStr = " + VideoFrameStr);
+		}
+	};
+    
+    private void startTimer() {
+    	mTimer.schedule(mTimerTask, 0, 100);
+    }
+    
+    private void stopTimer() {
+    	mTimerTask.cancel();
+    	mTimer.cancel();
     }
 }

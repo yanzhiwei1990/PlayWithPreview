@@ -1,8 +1,11 @@
 package com.droidlogic.tool.playvideowithpreview;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.droidlogic.app.SystemControlManager;
 
 import android.os.Environment;
 import android.util.Log;
@@ -71,4 +74,66 @@ public class FileUtils {
 
         return result;
     }
+	
+	public static String getVideoFps() {
+		String result = null;
+        String file_path = "/sys/class/vdec/vdec_status";
+        File file = new File(file_path);
+        String strMode = null;
+        try {
+        	if (!file.exists()) {
+                Log.d(TAG, "/sys/class/vdec/vdec_status not exist!");
+                return result;
+            }
+		} catch (Exception e) {
+			// TODO: handle exception
+			Log.e(TAG, "getVideoFps not exists Exception = " + e.getMessage());
+			e.printStackTrace();
+			return result;
+		}
+        FileInputStream fis;
+        try {
+            fis = new FileInputStream(file);
+            byte[] buf = new byte[1024];
+            int len = fis.read(buf, 0, buf.length);
+            fis.close();
+            Log.d(TAG, "getVideoFps len = " + len);
+            strMode = new String(buf, 0, len).trim();
+            // strMode = 1~7, 1--min, 7--max
+            Log.d(TAG, "getVideoFps vdec_status = " + strMode);
+            if(strMode != null && strMode.length() > 0){
+            	result = parseVideoFrame(strMode);
+            }
+        } catch (Exception e) {
+        	Log.e(TAG, "getVideoFps Exception = " + e.getMessage());
+            e.printStackTrace();
+        }
+        return result;
+    }
+	
+	public static String getVideoFpsBySystemControl(SystemControlManager manager) {
+		String result = null;
+		if (manager != null) {
+			String strMode = manager.readSysFs("/sys/class/vdec/vdec_status");
+			if(strMode != null && strMode.length() > 0){
+            	result = parseVideoFrame(strMode);
+            }
+		}
+		return result;
+	}
+	
+	private static String parseVideoFrame(String value) {
+		String result = null;
+		if (value != null && value.length() > 0) {
+			int start = value.indexOf("frame rate : ");//+13
+			int end = value.indexOf(" fps");
+			int preLength = "frame rate : ".length();
+			if (start != -1 && end != -1 && (start + preLength) < end) {
+				String sub = value.substring(start + preLength, end);
+				Log.d(TAG, "parseVideoFrame sub = " + sub);
+				result = sub;
+			}
+		}
+		return result;
+	}
 }

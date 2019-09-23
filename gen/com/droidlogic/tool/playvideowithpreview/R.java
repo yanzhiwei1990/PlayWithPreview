@@ -25,13 +25,14 @@ public final class R {
         public static final int ic_launcher=0x7f020000;
     }
     public static final class id {
-        public static final int action_settings=0x7f080008;
+        public static final int action_settings=0x7f080009;
         public static final int camera_container=0x7f080006;
         public static final int camera_view=0x7f080007;
         public static final int container=0x7f080000;
         public static final int init_button=0x7f080003;
         public static final int scrollView=0x7f080001;
         public static final int status_text=0x7f080002;
+        public static final int textView_fps=0x7f080008;
         public static final int video_container=0x7f080004;
         public static final int video_view=0x7f080005;
     }

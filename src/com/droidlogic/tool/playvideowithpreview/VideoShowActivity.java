@@ -9,8 +9,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+
+import com.droidlogic.app.SystemControlManager;
 
 import android.Manifest;
 import android.app.Activity;
@@ -45,6 +49,7 @@ import android.view.TextureView;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 import android.widget.ZoomButton;
@@ -60,10 +65,12 @@ public class VideoShowActivity extends Activity {
     private VideoView mVideoView;
     private AutoFitTextureView mTextureView;
     private LinearLayout mLinearLayout;
+    private TextView mVideoFrame;
     private boolean mIsSmallWindow = true;
     private int mZoomStatus = 2;
     private int[] ZOOM_WEIGHT = {384, 576, 758, 960, 1152, 1344};
     private int[] ZOOM_HEIGHT = {216, 315, 432, 540, 648, 756};
+    private SystemControlManager mSystemControlManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,11 +83,43 @@ public class VideoShowActivity extends Activity {
         mVideoView = (VideoView)findViewById(R.id.video_view);
         mTextureView = (AutoFitTextureView)findViewById(R.id.camera_view);
         mLinearLayout = (LinearLayout)findViewById(R.id.camera_container);
+        mVideoFrame = (TextView)findViewById(R.id.textView_fps);
         //mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         setupVideo();
         setTextureViewDisplay();
+        mSystemControlManager = SystemControlManager.getInstance();
     }
 
+    private Timer mTimer = new Timer();
+    private TimerTask mTimerTask = new TimerTask() {
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			final String VideoFrameStr = FileUtils.getVideoFpsBySystemControl(mSystemControlManager);//FileUtils.getVideoFps();
+			Log.d(TAG, "mTimerTask VideoFrameStr = " + VideoFrameStr);
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					if (VideoFrameStr == null || VideoFrameStr.length() == 0) {
+						mVideoFrame.setText("video frame rate: " + 0 + " fps");
+					} else {
+						mVideoFrame.setText("video frame rate: " + VideoFrameStr + " fps");
+					}
+				}
+			});
+		}
+	};
+    
+    private void startTimer() {
+    	mTimer.schedule(mTimerTask, 0, 100);
+    }
+    
+    private void stopTimer() {
+    	mTimerTask.cancel();
+    	mTimer.cancel();
+    }
+    
     private void setTextureViewDisplay() {
     	int[] size = getNeedDisplaySize();
 		setTextureViewSize(size[0], size[1]);
@@ -944,6 +983,7 @@ public class VideoShowActivity extends Activity {
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
+        startTimer();
     }
 
     @Override
@@ -958,6 +998,7 @@ public class VideoShowActivity extends Activity {
         closePreviewSession();
         closeCamera();
         stopBackgroundThread();
+        stopTimer();
     }
 
     @Override

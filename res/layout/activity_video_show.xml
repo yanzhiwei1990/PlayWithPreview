@@ -27,4 +27,13 @@
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/textView_fps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:hint="video frame rate"
+        android:text="video frame rate: 0 fps"
+        android:textSize="25sp" />
+
 </FrameLayout>
