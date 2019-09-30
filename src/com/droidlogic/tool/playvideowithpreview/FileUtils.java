@@ -136,4 +136,30 @@ public class FileUtils {
 		}
 		return result;
 	}
+	
+	public static String getDisplayFpsBySystemControl(SystemControlManager manager) {
+		String result = null;
+		if (manager != null) {
+			String strMode = manager.readSysFs("/sys/class/video/frame_rate");
+			if(strMode != null && strMode.length() > 0){
+            	result = parseDisplayVideoFrame(strMode);
+            }
+		}
+		return result;
+	}
+	
+	private static String parseDisplayVideoFrame(String value) {
+		String result = null;
+		if (value != null && value.length() > 0) {
+			int start = value.indexOf("VF.fps=");//+13
+			int end = value.indexOf(" panel fps");
+			int preLength = "VF.fps=".length();
+			if (start != -1 && end != -1 && (start + preLength) < end) {
+				String sub = value.substring(start + preLength, end);
+				Log.d(TAG, "parseDisplayVideoFrame sub = " + sub);
+				result = sub;
+			}
+		}
+		return result;
+	}
 }

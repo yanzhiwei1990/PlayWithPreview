@@ -96,15 +96,16 @@ public class VideoShowActivity extends Activity {
 		public void run() {
 			// TODO Auto-generated method stub
 			final String VideoFrameStr = FileUtils.getVideoFpsBySystemControl(mSystemControlManager);//FileUtils.getVideoFps();
-			Log.d(TAG, "mTimerTask VideoFrameStr = " + VideoFrameStr);
+			final String displayVideoFrameStr = FileUtils.getDisplayFpsBySystemControl(mSystemControlManager);
+			Log.d(TAG, "mTimerTask VideoFrameStr = " + VideoFrameStr + ", displayVideoFrameStr = " + displayVideoFrameStr);
 			runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
 					// TODO Auto-generated method stub
-					if (VideoFrameStr == null || VideoFrameStr.length() == 0) {
-						mVideoFrame.setText("video frame rate: " + 0 + " fps");
+					if (VideoFrameStr == null || VideoFrameStr.length() == 0 || displayVideoFrameStr == null || displayVideoFrameStr.length() == 0) {
+						mVideoFrame.setText("decode fps: " + 0 + " dsiplay fps:" + 0);
 					} else {
-						mVideoFrame.setText("video frame rate: " + VideoFrameStr + " fps");
+						mVideoFrame.setText("video fps: " + VideoFrameStr + " decode fps:" + displayVideoFrameStr);
 					}
 				}
 			});
@@ -112,7 +113,7 @@ public class VideoShowActivity extends Activity {
 	};
     
     private void startTimer() {
-    	mTimer.schedule(mTimerTask, 0, 100);
+    	mTimer.schedule(mTimerTask, 0, 500);
     }
     
     private void stopTimer() {
